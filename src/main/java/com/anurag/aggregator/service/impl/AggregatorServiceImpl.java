@@ -53,6 +53,7 @@ public class AggregatorServiceImpl implements AggregatorService {
                         fromApisAndRequest(mapping, request)    // Zip each mapping with its payload => Flux<Mono<Tuple2<Api, Object>>>
                                 .map(monoTuple ->               // For each Tuple2 of Api and its payload, we execute the API
                                         monoTuple.map(tuple -> executeApi(tuple.getT1(), tuple.getT2()))
+                                                .subscribeOn(Schedulers.elastic())
                                 )
                                 .flatMap(monoMap -> monoMap.subscribeOn(Schedulers.elastic()))
                                 .collect((Supplier<ConcurrentHashMap<String, Object>>) ConcurrentHashMap::new, ConcurrentHashMap::putAll)
