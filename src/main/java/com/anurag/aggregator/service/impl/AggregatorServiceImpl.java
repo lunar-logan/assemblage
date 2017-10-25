@@ -47,7 +47,9 @@ public class AggregatorServiceImpl implements AggregatorService {
 
     @Override
     public Mono<AggregatorServiceResponse> aggregate(AggregatorServiceRequest request) {
-        return Mono.just(aggregatorServiceRepository.findByServiceName(request.getServiceName())) // TODO : add caching
+        return Mono.just(request) // TODO : add caching
+                .map(AggregatorServiceRequest::getServiceName)
+                .map(aggregatorServiceRepository::findByServiceName)
                 .flatMap(mapping ->
                                 Flux.fromStream(mapping.getApis().stream())
                                         .flatMap(api ->
