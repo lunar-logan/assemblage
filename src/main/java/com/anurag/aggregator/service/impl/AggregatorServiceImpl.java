@@ -51,19 +51,19 @@ public class AggregatorServiceImpl implements AggregatorService {
                 .map(AggregatorServiceRequest::getServiceName)
                 .map(aggregatorServiceRepository::findByServiceName)
                 .flatMap(mapping ->
-                                Flux.fromStream(mapping.getApis().stream())
-                                        .flatMap(api ->
-                                                Mono.fromCallable(() -> executeApi(api, nullObject))
-                                                        .subscribeOn(Schedulers.elastic())
-                                        )
-                                        .collect((Supplier<ConcurrentHashMap<String, Object>>) ConcurrentHashMap::new, ConcurrentHashMap::putAll)
-                                        .map(map -> {
-                                            AggregatorServiceResponse response = new AggregatorServiceResponse();
-                                            response.setData(map);
-                                            response.setSuccessful(true);
-                                            return response;
-                                        })
-//                                .subscribeOn(Schedulers.elastic())
+                        Flux.fromStream(mapping.getApis().stream())
+                                .flatMap(api ->
+                                        Mono.fromCallable(() -> executeApi(api, nullObject))
+                                                .subscribeOn(Schedulers.elastic())
+                                )
+                                .collect((Supplier<HashMap<String, Object>>) HashMap::new, HashMap::putAll)
+                                .map(map -> {
+                                    AggregatorServiceResponse response = new AggregatorServiceResponse();
+                                    response.setData(map);
+                                    response.setSuccessful(true);
+                                    return response;
+                                })
+                                .subscribeOn(Schedulers.elastic())
                 )/*.subscribeOn(Schedulers.elastic())*/;
 //                                            .subscribe(response -> {
 //                                                results.putAll(response);
