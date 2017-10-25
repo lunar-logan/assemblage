@@ -60,7 +60,8 @@ public class AggregatorWebServiceController {
     public Flux<String> handleMessageFlux0(long delay) {
         return Flux.just("Hello")
                 .delaySubscription(Duration.ofMillis(delay))
-                .map(String::toUpperCase);
+                .map(String::toUpperCase)
+                .subscribeOn(Schedulers.elastic());
     }
 
 
