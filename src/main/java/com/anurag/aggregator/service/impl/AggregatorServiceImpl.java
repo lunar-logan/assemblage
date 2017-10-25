@@ -49,12 +49,15 @@ public class AggregatorServiceImpl implements AggregatorService {
     public Mono<AggregatorServiceResponse> aggregate(AggregatorServiceRequest request) {
         return Mono.just(request) // TODO : add caching
                 .map(AggregatorServiceRequest::getServiceName)
-                .map(aggregatorServiceRepository::findByServiceName)
+                .flatMap(name ->
+                        Mono.fromCallable(() ->
+                                aggregatorServiceRepository.findByServiceName(name))
+                                .subscribeOn(Schedulers.elastic()))
                 .flatMap(mapping ->
                         Flux.fromStream(mapping.getApis().stream())
                                 .flatMap(api ->
                                         Mono.fromCallable(() -> executeApi(api, nullObject))
-//                                                .subscribeOn(Schedulers.elastic())
+                                                .subscribeOn(Schedulers.elastic())
                                 )
                                 .collect((Supplier<HashMap<String, Object>>) HashMap::new, HashMap::putAll)
                                 .map(map -> {
