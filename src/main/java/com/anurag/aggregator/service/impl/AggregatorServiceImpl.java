@@ -62,11 +62,6 @@ public class AggregatorServiceImpl implements AggregatorService {
                                     response.setSuccessful(true);
                                     return response;
                                 })
-                                .onErrorMap(e -> {
-                                    AggregatorServiceResponse response = new AggregatorServiceResponse();
-                                    response.setSuccessful(false);
-                                    return response;
-                                })
                 );
     }
 
