@@ -54,7 +54,7 @@ public class AggregatorServiceImpl implements AggregatorService {
                         Flux.fromStream(mapping.getApis().stream())
                                 .flatMap(api ->
                                         Mono.fromCallable(() -> executeApi(api, nullObject))
-                                                .subscribeOn(Schedulers.elastic())
+//                                                .subscribeOn(Schedulers.elastic())
                                 )
                                 .collect((Supplier<HashMap<String, Object>>) HashMap::new, HashMap::putAll)
                                 .map(map -> {
