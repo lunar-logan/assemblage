@@ -3,11 +3,12 @@ package com.anurag.aggregator.common.entity;
 import java.util.List;
 
 public class AggregatorServiceApiMapping {
-//    @Id
+    //    @Id
     private String id;
 
-//    @Indexed
+    //    @Indexed
     private String serviceName;
+
     private List<Api> apis;
 
     public String getId() {
