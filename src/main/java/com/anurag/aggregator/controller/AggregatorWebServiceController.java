@@ -13,7 +13,9 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.util.function.Tuples;
 
+import java.time.Duration;
 import java.util.Collection;
 
 /**
@@ -48,6 +50,17 @@ public class AggregatorWebServiceController {
                 .map(u -> u * u)
                 .reduce(0L, (u, v) -> u + v);
 //                .subscribeOn(Schedulers.elastic());
+    }
+
+    @RequestMapping(path = "/sample/{delay}", method = RequestMethod.GET)
+    public Flux<String> handleMessageFlux(@PathVariable("delay") long delay) {
+        return this.handleMessageFlux0(delay);
+    }
+
+    public Flux<String> handleMessageFlux0(long delay) {
+        return Flux.just("Hello")
+                .delaySubscription(Duration.ofMillis(delay))
+                .map(String::toUpperCase);
     }
 
 
