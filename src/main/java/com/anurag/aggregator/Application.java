@@ -1,0 +1,64 @@
+package com.anurag.aggregator;
+
+import com.mongodb.reactivestreams.client.MongoClient;
+import com.mongodb.reactivestreams.client.MongoClients;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.context.annotation.PropertySources;
+import org.springframework.core.env.Environment;
+import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
+import org.springframework.data.mongodb.repository.config.EnableReactiveMongoRepositories;
+
+/**
+ * The driver class of this project
+ */
+@SpringBootApplication
+//@EnableAutoConfiguration
+@PropertySources(value = {@PropertySource("classpath:application.properties")})
+public class Application {
+
+//    @Autowired
+//    public Application(Environment environment) {
+//        this.env = environment;
+//    }
+
+    public static void main(String[] args) {
+        SpringApplication.run(Application.class, args);
+    }
+
+    /*
+
+        Various bean definitions
+     */
+   /* @Bean
+    public MongoClient mongoClient() {
+        return MongoClients.create(String.format("mongodb://%s:%s",
+                env.getProperty("spring.data.mongodb.host", "localhost"),
+                env.getProperty("spring.data.mongodb.port", "27017"))
+        );
+    }*/
+
+    /*@Bean
+    @Autowired
+    public ReactiveMongoTemplate reactiveMongoTemplate(MongoClient mongoClient) {
+        return new ReactiveMongoTemplate(mongoClient, env.getProperty("spring.data.mongodb.database", "aggregator-db"));
+    }*/
+
+    @Bean
+    public CloseableHttpClient httpClient() {
+        return HttpClients.createDefault();
+    }
+
+    /*
+
+    Various member fields declarations
+     */
+//    private final Environment env;
+}
