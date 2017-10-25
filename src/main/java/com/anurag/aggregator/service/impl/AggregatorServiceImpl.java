@@ -52,7 +52,7 @@ public class AggregatorServiceImpl implements AggregatorService {
                                 Flux.fromStream(mapping.getApis().stream())
                                         .flatMap(api ->
                                                 Mono.fromCallable(() -> executeApi(api, nullObject))
-                                                        .subscribeOn(Schedulers.elastic())
+//                                                        .subscribeOn(Schedulers.elastic())
                                         )
                                         .collect((Supplier<ConcurrentHashMap<String, Object>>) ConcurrentHashMap::new, ConcurrentHashMap::putAll)
                                         .map(map -> {
@@ -62,7 +62,7 @@ public class AggregatorServiceImpl implements AggregatorService {
                                             return response;
                                         })
 //                                .subscribeOn(Schedulers.elastic())
-                ).subscribeOn(Schedulers.elastic());
+                )/*.subscribeOn(Schedulers.elastic())*/;
 //                                            .subscribe(response -> {
 //                                                results.putAll(response);
 //                                                signal.countDown();
