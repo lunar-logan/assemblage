@@ -25,11 +25,9 @@ import reactor.util.function.Tuple2;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.function.Supplier;
 
 @Service
@@ -50,30 +48,30 @@ public class AggregatorServiceImpl implements AggregatorService {
     public Mono<AggregatorServiceResponse> aggregate(AggregatorServiceRequest request) {
         return Mono.just(aggregatorServiceRepository.findByServiceName(request.getServiceName())) // TODO : add caching
                 .flatMap(mapping ->
-                        fromApisAndRequest(mapping, request)    // Zip each mapping with its payload => Flux<Mono<Tuple2<Api, Object>>>
-                                .map(monoTuple ->               // For each Tuple2 of Api and its payload, we execute the API
-                                        monoTuple.map(tuple -> executeApi(tuple.getT1(), tuple.getT2()))
-                                                .subscribeOn(Schedulers.elastic())
-                                )
-                                .flatMap(monoMap -> monoMap.subscribeOn(Schedulers.elastic()))
-                                .collect((Supplier<ConcurrentHashMap<String, Object>>) ConcurrentHashMap::new, ConcurrentHashMap::putAll)
-                                .map(map -> {
-                                    AggregatorServiceResponse response = new AggregatorServiceResponse();
-                                    response.setData(map);
-                                    response.setSuccessful(true);
-                                    return response;
-                                })
-                );
+                                fromApisAndRequest(mapping, request)    // Zip each mapping with its payload => Flux<Tuple2<Api, Object>>
+                                        .flatMap(tuple ->               // For each Tuple2 of Api and its payload, we execute the API
+                                                Mono.fromCallable(() ->
+                                                        executeApi(tuple.getT1(), tuple.getT2())).subscribeOn(Schedulers.elastic())
+                                        )
+//                                .flatMap(monoMap -> monoMap.subscribeOn(Schedulers.elastic()))
+                                        .collect((Supplier<ConcurrentHashMap<String, Object>>) ConcurrentHashMap::new, ConcurrentHashMap::putAll)
+                                        .map(map -> {
+                                            AggregatorServiceResponse response = new AggregatorServiceResponse();
+                                            response.setData(map);
+                                            response.setSuccessful(true);
+                                            return response;
+                                        })
+                ).subscribeOn(Schedulers.elastic());
     }
 
     /**
      * Zips the Api with its payload (if any) and returns a {@link Flux}. In case the {@link Api}'s endpoint does not consumes
      * a payload, the Api is zipped with a special sentinel object called as a {@code nullObject} declared as a static member.
      */
-    private Flux<Mono<Tuple2<Api, Object>>> fromApisAndRequest(AggregatorServiceApiMapping mapping, AggregatorServiceRequest request) {
+    private Flux<Tuple2<Api, Object>> fromApisAndRequest(AggregatorServiceApiMapping mapping, AggregatorServiceRequest request) {
         Map<String, Object> payloads = request.getPayloads()/* == null ? Collections.emptyMap() : request.getPayloads()*/;
         return Flux.fromStream(mapping.getApis().stream()) // mapping.getApis() must not be null, if it is, to futega
-                .map(api -> {
+                .flatMap(api -> {
                     if (payloads != null && payloads.containsKey(api.getName())) {
                         return Mono.zip(Mono.just(api), Mono.just(payloads.get(api.getName())));
                     }

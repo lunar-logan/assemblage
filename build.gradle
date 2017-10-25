@@ -20,7 +20,7 @@ apply plugin: 'application'
 apply plugin: 'com.github.johnrengelman.shadow'
 
 mainClassName = 'com.anurag.aggregator.Application'
-
+applicationDefaultJvmArgs = ["-Djava.net.preferIPv4Stack=true", "-Dcom.sun.management.jmxremote.local.only=false", "-Djava.rmi.server.hostname=52.172.193.11", "-Dcom.sun.management.jmxremote", "-Dcom.sun.management.jmxremote.port=18028", "-Dcom.sun.management.jmxremote.authenticate=false", "-Dcom.sun.management.jmxremote.ssl=false"]
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
