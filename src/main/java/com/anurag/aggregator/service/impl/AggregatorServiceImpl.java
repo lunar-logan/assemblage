@@ -62,7 +62,7 @@ public class AggregatorServiceImpl implements AggregatorService {
                                 )
                                 .collect((Supplier<HashMap<String, Object>>) HashMap::new, HashMap::putAll)
                                 .map(map -> {
-                                    log.info("building Aggregator service response for map {}, request-Id", map, request.getId());
+                                    log.info("building Aggregator service response for map {}, request-Id: {}", map, request.getId());
                                     AggregatorServiceResponse response = new AggregatorServiceResponse();
                                     response.setData(map);
                                     response.setSuccessful(true);
