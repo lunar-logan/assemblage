@@ -48,54 +48,28 @@ public class AggregatorServiceImpl implements AggregatorService {
         return Mono.just(request) // TODO : add caching
                 .map(AggregatorServiceRequest::getServiceName)
                 .flatMap(name ->
-                        Mono.fromCallable(() ->
-                                aggregatorServiceRepository.findByServiceName(name))
-                                .subscribeOn(Schedulers.elastic()))
-                .flatMap(mapping ->
+                        Mono.fromCallable(() -> {
+                            log.info("Getting mapping for service {}", name);
+                            return aggregatorServiceRepository.findByServiceName(name);
+                        }).subscribeOn(Schedulers.elastic())
+                ).flatMap(mapping ->
                         Flux.fromStream(mapping.getApis().stream())
-                                .flatMap(api ->
-                                        Mono.fromCallable(() -> executeApi(api, nullObject))
-                                                .subscribeOn(Schedulers.elastic())
+                                .flatMap(api -> {
+                                            log.info("Executing api: {}", api);
+                                            return Mono.fromCallable(() -> executeApi(api, nullObject))
+                                                    .subscribeOn(Schedulers.elastic());
+                                        }
                                 )
                                 .collect((Supplier<HashMap<String, Object>>) HashMap::new, HashMap::putAll)
                                 .map(map -> {
+                                    log.info("building Aggregator service response for map {}", map);
                                     AggregatorServiceResponse response = new AggregatorServiceResponse();
                                     response.setData(map);
                                     response.setSuccessful(true);
                                     return response;
                                 })
                                 .subscribeOn(Schedulers.elastic())
-                )/*.subscribeOn(Schedulers.elastic())*/;
-//                                            .subscribe(response -> {
-//                                                results.putAll(response);
-//                                                signal.countDown();
-//                                            }, error -> log.info("Failed due to, ", error)));
-
-//                    try {
-//                        signal.await();
-//                    } catch (InterruptedException e) {
-//                        e.printStackTrace();
-//                    }
-//                    AggregatorServiceResponse response = new AggregatorServiceResponse();
-//                    response.setData(results);
-//                    response.setSuccessful(true);
-//                    return response;
-//                });
-
-                                /*fromApisAndRequest(mapping, request)    // Zip each mapping with its payload => Flux<Tuple2<Api, Object>>
-                                        .flatMap(tuple ->               // For each Tuple2 of Api and its payload, we execute the API
-                                                Mono.fromCallable(() ->
-                                                        executeApi(tuple.getT1(), tuple.getT2())).subscribeOn(Schedulers.elastic())
-                                        )
-//                                .flatMap(monoMap -> monoMap.subscribeOn(Schedulers.elastic()))
-                                        .collect((Supplier<ConcurrentHashMap<String, Object>>) ConcurrentHashMap::new, ConcurrentHashMap::putAll)
-                                        .map(map -> {
-                                            AggregatorServiceResponse response = new AggregatorServiceResponse();
-                                            response.setData(map);
-                                            response.setSuccessful(true);
-                                            return response;
-                                        })*/
-//                );
+                );
     }
 
     /**
@@ -127,7 +101,7 @@ public class AggregatorServiceImpl implements AggregatorService {
         Map<String, Object> results = new HashMap<>();
         final java.lang.String response = executeEndpoint(api.getEndpoint(), payload);
 
-        log.info("Response after executing endpoint: {}", response);
+        log.info("Response after executing endpoint: {}, now processing response", response);
         if (response != null) {
             api.getFieldExpressionMap().forEach((f, e) -> {
                 try {
