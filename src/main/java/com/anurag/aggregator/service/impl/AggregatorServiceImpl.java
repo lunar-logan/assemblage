@@ -46,12 +46,15 @@ public class AggregatorServiceImpl implements AggregatorService {
     @Override
     public Mono<AggregatorServiceResponse> aggregate(AggregatorServiceRequest request) {
         return Mono.just(request) // TODO : add caching
-                .map(AggregatorServiceRequest::getServiceName)
+                .map(req -> {
+                    log.info("Mapping service name, request-id {}", req.getId());
+                    return req.getServiceName();
+                })
                 .flatMap(name ->
                         Mono.fromCallable(() -> {
                             log.info("Getting mapping for service {}, request-id: {}", name, request.getId());
                             return aggregatorServiceRepository.findByServiceName(name);
-                        }).subscribeOn(Schedulers.elastic())
+                        }).publishOn(Schedulers.elastic())
                 ).flatMap(mapping ->
                                 Flux.fromStream(mapping.getApis().stream())
                                         .flatMap(api -> {
@@ -70,7 +73,7 @@ public class AggregatorServiceImpl implements AggregatorService {
                                             return response;
                                         })
 //                                .subscribeOn(Schedulers.elastic())
-                )/*.subscribeOn(Schedulers.elastic())*/;
+                ).publishOn(Schedulers.elastic());
     }
 
     /**
