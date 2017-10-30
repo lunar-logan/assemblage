@@ -51,13 +51,13 @@ public class AggregatorServiceImpl implements AggregatorService {
                         Mono.fromCallable(() -> {
                             log.info("Getting mapping for service {}, request-id: {}", name, request.getId());
                             return aggregatorServiceRepository.findByServiceName(name);
-                        }).subscribeOn(Schedulers.elastic())
+                        })//.subscribeOn(Schedulers.elastic())
                 ).flatMap(mapping ->
                         Flux.fromStream(mapping.getApis().stream())
                                 .flatMap(api -> {
                                             log.info("Executing api: {}, request-id: {}", api, request.getId());
-                                            return Mono.fromCallable(() -> executeApi(api, nullObject))
-                                                    .subscribeOn(Schedulers.elastic());
+                                            return Mono.fromCallable(() -> executeApi(api, nullObject));
+//                                                    .subscribeOn(Schedulers.elastic());
                                         }
                                 )
                                 .collect((Supplier<HashMap<String, Object>>) HashMap::new, HashMap::putAll)
@@ -68,7 +68,7 @@ public class AggregatorServiceImpl implements AggregatorService {
                                     response.setSuccessful(true);
                                     return response;
                                 })
-                                .subscribeOn(Schedulers.elastic())
+//                                .subscribeOn(Schedulers.elastic())
                 );
     }
 
