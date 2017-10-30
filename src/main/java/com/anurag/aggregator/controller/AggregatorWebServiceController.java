@@ -7,6 +7,9 @@ import com.anurag.aggregator.common.response.AggregatorServiceResponse;
 import com.anurag.aggregator.common.response.RegisterServiceResponse;
 import com.anurag.aggregator.repository.AggregatorServiceApiMappingRepository;
 import com.anurag.aggregator.service.AggregatorService;
+import com.anurag.aggregator.service.impl.AggregatorServiceImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.MimeType;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +20,7 @@ import reactor.util.function.Tuples;
 
 import java.time.Duration;
 import java.util.Collection;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The main controller describing all the endpoints exposed by this service.
@@ -24,6 +28,8 @@ import java.util.Collection;
 @RestController
 @RequestMapping(value = AggregatorWebServiceController.route)
 public class AggregatorWebServiceController {
+    static final Logger log = LoggerFactory.getLogger(AggregatorWebServiceController.class);
+
     static final String route = "/aggregator/service";
 
     @PostMapping(value = "/register", produces = "application/json")
@@ -33,7 +39,10 @@ public class AggregatorWebServiceController {
 
     @PostMapping(value = "/aggregate", produces = "application/json")
     public Mono<AggregatorServiceResponse> aggregate(@RequestBody AggregatorServiceRequest request) {
-        return aggregatorService.aggregate(request);
+        long st = System.nanoTime();
+        Mono<AggregatorServiceResponse> response = aggregatorService.aggregate(request);
+        log.info("Response emitter built in {} us", TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - st));
+        return response;
     }
 
 
