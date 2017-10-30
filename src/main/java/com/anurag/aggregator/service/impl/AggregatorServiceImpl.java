@@ -49,20 +49,20 @@ public class AggregatorServiceImpl implements AggregatorService {
                 .map(AggregatorServiceRequest::getServiceName)
                 .flatMap(name ->
                         Mono.fromCallable(() -> {
-                            log.info("Getting mapping for service {}", name);
+                            log.info("Getting mapping for service {}, request-id: {}", name, request.getId());
                             return aggregatorServiceRepository.findByServiceName(name);
                         }).subscribeOn(Schedulers.elastic())
                 ).flatMap(mapping ->
                         Flux.fromStream(mapping.getApis().stream())
                                 .flatMap(api -> {
-                                            log.info("Executing api: {}", api);
+                                            log.info("Executing api: {}, request-id: {}", api, request.getId());
                                             return Mono.fromCallable(() -> executeApi(api, nullObject))
                                                     .subscribeOn(Schedulers.elastic());
                                         }
                                 )
                                 .collect((Supplier<HashMap<String, Object>>) HashMap::new, HashMap::putAll)
                                 .map(map -> {
-                                    log.info("building Aggregator service response for map {}", map);
+                                    log.info("building Aggregator service response for map {}, request-Id", map, request.getId());
                                     AggregatorServiceResponse response = new AggregatorServiceResponse();
                                     response.setData(map);
                                     response.setSuccessful(true);
