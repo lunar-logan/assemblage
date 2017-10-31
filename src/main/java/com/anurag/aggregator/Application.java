@@ -13,6 +13,8 @@ import org.springframework.context.annotation.*;
 import org.springframework.core.env.Environment;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.data.mongodb.repository.config.EnableReactiveMongoRepositories;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.web.reactive.function.client.WebClient;
 
 /**
  * The driver class of this project
@@ -32,10 +34,25 @@ public class Application {
         SpringApplication.run(Application.class, args);
     }
 
+
+
     /*
 
         Various bean definitions
      */
+
+    /**
+     * Reactive {@link WebClient} bean declaration, hope its good as they say
+     *
+     * @return a new instance of {@link WebClient}
+     */
+    @Bean
+    public WebClient webClient() {
+        return WebClient.builder()
+                .clientConnector(new ReactorClientHttpConnector())
+                .build();
+    }
+
    /* @Bean
     public MongoClient mongoClient() {
         return MongoClients.create(String.format("mongodb://%s:%s",

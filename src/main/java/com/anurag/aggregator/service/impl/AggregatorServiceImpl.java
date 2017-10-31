@@ -14,10 +14,16 @@ import com.anurag.aggregator.common.type.ExpressionType;
 import com.anurag.aggregator.common.type.TransportType;
 import com.anurag.aggregator.repository.AggregatorServiceApiMappingRepository;
 import com.anurag.aggregator.service.*;
+import org.hibernate.validator.internal.metadata.aggregated.rule.ReturnValueMayOnlyBeMarkedOnceAsCascadedPerHierarchyLine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.BodyExtractors;
+import org.springframework.web.reactive.function.client.ClientRequest;
+import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -54,26 +60,23 @@ public class AggregatorServiceImpl implements AggregatorService {
                         Mono.fromCallable(() -> {
                             log.info("Getting mapping for service {}, request-id: {}", name, request.getId());
                             return aggregatorServiceRepository.findByServiceName(name);
-                        }) // .publishOn(Schedulers.elastic())
+                        })
                 ).flatMap(mapping ->
-                                Flux.fromStream(mapping.getApis().stream())
-                                        .flatMap(api -> {
-                                                    log.info("Executing api: {}, request-id: {}", api, request.getId());
-                                                    return Mono.fromCallable(() -> executeApi(api, nullObject))
-//                                                            .publishOn(Schedulers.elastic());
-                                                            .subscribeOn(Schedulers.elastic());
-                                                }
-                                        )
-                                        .collect((Supplier<HashMap<String, Object>>) HashMap::new, HashMap::putAll)
-                                        .map(map -> {
-                                            log.info("building Aggregator service response for map {}, request-Id: {}", map, request.getId());
-                                            AggregatorServiceResponse response = new AggregatorServiceResponse();
-                                            response.setData(map);
-                                            response.setSuccessful(true);
-                                            return response;
-                                        })
-//                                .subscribeOn(Schedulers.elastic())
-                ).subscribeOn(Schedulers.elastic()); //.publishOn(Schedulers.elastic());
+                        Flux.fromStream(mapping.getApis().stream())
+                                .flatMap(api -> {
+                                            log.info("Executing api: {}, request-id: {}", api, request.getId());
+                                            return executeApiAsync(api, nullObject);// Mono.fromCallable(() -> executeApi(api, nullObject)).subscribeOn(Schedulers.elastic());
+                                        }
+                                )
+                                .collect((Supplier<HashMap<String, Object>>) HashMap::new, HashMap::putAll)
+                                .map(map -> {
+                                    log.info("building Aggregator service response for map {}, request-Id: {}", map, request.getId());
+                                    AggregatorServiceResponse response = new AggregatorServiceResponse();
+                                    response.setData(map);
+                                    response.setSuccessful(true);
+                                    return response;
+                                })
+                ).subscribeOn(Schedulers.elastic());
     }
 
     /**
@@ -92,10 +95,23 @@ public class AggregatorServiceImpl implements AggregatorService {
                 });
     }
 
+    @SuppressWarnings("unchecked")
+    private Mono<HashMap<String, Object>> executeApiAsync(Api api, Object payload) {
+        return executeEndpointAsync(Mono.just(api), Mono.just(payload))
+                .flatMap(content -> Flux.fromStream(api.getFieldExpressionMap().entrySet().stream())
+                        .flatMap(e ->
+                                Mono.zip(
+                                        Mono.just(e.getKey()),
+                                        Mono.just(expressionExecutionServiceFactory.getInstance(ExpressionType.valueOf(e.getValue().getType()))
+                                                .execute(e.getValue(), content))
+                                ))
+                        .collect((Supplier<HashMap<String, Object>>) HashMap::new, (map, tuple) -> map.put(tuple.getT1(), tuple.getT2())));
+    }
+
 
     /**
      * Executes the Api by executing all the endpoints associated with the Api and extracting the fields from the
-     * response JSON
+     * response JSON.
      *
      * @param api
      * @return
@@ -116,6 +132,15 @@ public class AggregatorServiceImpl implements AggregatorService {
             });
         }
         return results;
+    }
+
+    private Mono<String> executeEndpointAsync(Mono<Api> apiPublisher, Mono<Object> payloadPublisher) {
+        return apiPublisher.flatMap(api ->
+                webClient.method(HttpMethod.GET)
+                        .uri(URI.create(api.getEndpoint().getUrl()))
+                        .exchange()
+                        .flatMap(clientResponse -> clientResponse.bodyToMono(String.class)));
+
     }
 
     /**
@@ -153,7 +178,7 @@ public class AggregatorServiceImpl implements AggregatorService {
 
 
     @Autowired
-    public AggregatorServiceImpl(ConverterService converterService, AggregatorServiceApiMappingRepository aggregatorServiceRepository, TransportRequestBuilderServiceFactory transportRequestBuilderFactory, /*TransportRequestBuilderService<HttpRequest> httpRequestTransportRequestBuilder,*/ TransportServiceFactory transportServiceFactory, ExpressionExecutionServiceFactory expressionExecutionServiceFactory, ExecutorServiceFactory executorServiceFactory, CacheService cacheService) {
+    public AggregatorServiceImpl(ConverterService converterService, AggregatorServiceApiMappingRepository aggregatorServiceRepository, TransportRequestBuilderServiceFactory transportRequestBuilderFactory, /*TransportRequestBuilderService<HttpRequest> httpRequestTransportRequestBuilder,*/ TransportServiceFactory transportServiceFactory, ExpressionExecutionServiceFactory expressionExecutionServiceFactory, ExecutorServiceFactory executorServiceFactory, CacheService cacheService, WebClient webClient) {
         this.converterService = converterService;
         this.aggregatorServiceRepository = aggregatorServiceRepository;
         this.transportRequestBuilderFactory = transportRequestBuilderFactory;
@@ -161,6 +186,7 @@ public class AggregatorServiceImpl implements AggregatorService {
         this.expressionExecutionServiceFactory = expressionExecutionServiceFactory;
         this.executorServiceFactory = executorServiceFactory;
         this.cacheService = cacheService;
+        this.webClient = webClient;
     }
 
     private final ConverterService converterService;
@@ -170,4 +196,6 @@ public class AggregatorServiceImpl implements AggregatorService {
     private final ExpressionExecutionServiceFactory expressionExecutionServiceFactory;
     private final ExecutorServiceFactory executorServiceFactory;
     private final CacheService cacheService;
+
+    private final WebClient webClient;
 }
